@@ -1,0 +1,80 @@
+- name: Configure Ubuntu Server
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt package list
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: dist
+        cache_valid_time: 3600
+
+    - name: Install necessary packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - vim
+        - curl
+        - git
+        - ufw
+        - htop
+        - iftop
+
+
+    - name: Enable UFW firewall ports
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - 22
+        - 80
+        - 8080
+        - 443
+      when: ansible_distribution == "Ubuntu" and ansible_distribution_version is version('22.04', '>')
+
+    - name: Deny UFW firewall on ports 9000 and 9009
+      ufw:
+        rule: deny
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - 9000
+        - 9009
+      when: ansible_distribution == "Ubuntu" and ansible_distribution_version is version('22.04', '>')
+
+    - name: Ensure UFW is enabled
+      ufw:
+        state: enabled
+        policy: deny
+
+    - name: Create a new user (devops)
+      user:
+        name: devops
+        state: present
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Create SSH directory for the new user
+      file:
+        path: "/home/devops/.ssh"
+        state: directory
+        owner: devops
+        group: devops
+        mode: '0700'
+
+    - name: Copy SSH public key to the new user's authorized_keys
+      copy:
+        content: "{{ lookup('file', '~/.ssh/ansible1_key.pub') }}"
+        dest: "/home/devops/.ssh/authorized_keys"
+        owner: devops
+        group: devops
+        mode: '0600'
+
+    - name: Accept release info changes for APT repositories
+      command: apt update --allow-releaseinfo-change
