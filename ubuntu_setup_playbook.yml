@@ -8,11 +8,6 @@
         update_cache: yes
         cache_valid_time: 3600
 
-    - name: Upgrade all packages
-      apt:
-        upgrade: dist
-        cache_valid_time: 3600
-
     - name: Install necessary packages
       apt:
         name: "{{ item }}"
@@ -74,7 +69,7 @@
         dest: "/home/devops/.ssh/authorized_keys"
         owner: devops
         group: devops
-        mode: '0600'
+        mode: '0655'
 
     - name: Accept release info changes for APT repositories
       command: apt update --allow-releaseinfo-change
